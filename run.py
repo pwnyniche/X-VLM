@@ -13,10 +13,10 @@ from utils.hdfs_io import HADOOP_BIN, hexists, hmkdir, hcopy
 
 ############ Set it correctly for distributed training across nodes
 NNODES = 1  # e.g. 1/2/3/4
-NPROC_PER_NODE = 8  # e.g. 8 gpus
+NPROC_PER_NODE = 2  # e.g. 8 gpus
 
 MASTER_ADDR = 'SET_IT'
-MASTER_PORT = 12345
+MASTER_PORT = 8888
 NODE_RANK = 0  # e.g. 0/1/2
 ############
 
@@ -39,6 +39,9 @@ def get_dist_launch(args):  # some examples
         return "python3 -m torch.distributed.launch --nproc_per_node={:} " \
                "--nnodes={:} --node_rank={:} --master_addr={:} --master_port={:}".format(
             NPROC_PER_NODE, NNODES, NODE_RANK, MASTER_ADDR, MASTER_PORT)
+    elif args.dist =='custom':
+        return "CUDA_VISIBLE_DEVICES=2 WORLD_SIZE=1 python3 -m torch.distributed.launch --nproc_per_node=1 " \
+               "--nnodes=1 "
 
     elif args.dist == '1':
         return "python3 -m torch.distributed.launch --nproc_per_node={:} " \
@@ -141,6 +144,18 @@ def run_nlvr2(load_nlvr_pretrain=False):
               f"{'--evaluate' if args.evaluate else ''}")
 
 
+def run_cosmos(args):
+    dist_launch = get_dist_launch(args)
+
+    assert os.path.exists("images/cosmos")
+
+    print("### Training COSMOS", flush=True)
+    os.system(f"{dist_launch} "
+              "--use_env COSMOS.py --config configs/COSMOS.yaml "
+              f"--output_dir {args.output_dir} --bs {args.bs} --checkpoint {args.checkpoint} {'--evaluate' if args.evaluate else ''} "
+              f"{'--evaluate' if args.evaluate else ''}")
+
+
 def run_itr_flickr():
     dist_launch = get_dist_launch(args)
 
@@ -222,13 +237,13 @@ def run_pretrain_captioning(args):
 
 def run_coco_captioning(args, load_capt_pretrain=False, scst=False):
     dist_launch = get_dist_launch(args)
-
+    print(args)
     assert os.path.exists("images/coco")
 
     print("### Training COCO Captioning", flush=True)
 
     if not os.path.exists(args.config):
-        args.config = f'./configs/{args.model}/Captioning.yaml'
+        args.config = f'./configs/Captioning_cosmos.yaml'
 
     if scst:
         load_capt_pretrain = True  # same way to load ckpt;
@@ -236,7 +251,7 @@ def run_coco_captioning(args, load_capt_pretrain=False, scst=False):
     os.system(f"{dist_launch} "
               f"--use_env {'Captioning_scst.py' if scst else 'Captioning.py'} --config {args.config} "
               f"{f'--output_hdfs {args.output_hdfs}' if len(args.output_hdfs) else ''} --output_dir {args.output_dir} "
-              f"--bs {args.bs} --seed {args.seed} --checkpoint {args.checkpoint} "
+              f"--bs {args.bs} --seed 0 --checkpoint {args.checkpoint} "
               f"{'--scst' if scst else ''}  {'--load_capt_pretrain' if load_capt_pretrain else ''} {'--evaluate' if args.evaluate else ''}")
 
 
@@ -267,8 +282,11 @@ def run(args):
         run_vqa(args)
 
     elif args.task == 'nlvr':
-        run_pretrain_nlvr(args)
-        # run_nlvr2()  # w/o domain pretrain
+        # run_pretrain_nlvr(args)
+        run_nlvr2()  # w/o domain pretrain
+
+    elif args.task == 'cosmos':
+        run_cosmos(args)
 
     elif args.task == 'refcoco_weakly':
         run_refcoco(block_num=9)  # 9 for X-VLM base

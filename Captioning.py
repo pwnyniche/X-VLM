@@ -40,7 +40,7 @@ def train(model, data_loader, optimizer, epoch, device, scheduler, scst_criterio
     metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.5f}'))
 
     header = 'Train Epoch: [{}]'.format(epoch)
-    print_freq = 50
+    print_freq = 500
 
     for i, (image, caption, _) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         image = image.to(device, non_blocking=True)
@@ -65,14 +65,14 @@ def train(model, data_loader, optimizer, epoch, device, scheduler, scst_criterio
 def evaluation(model, data_loader, device, config):
     # test
     model.eval()
-
+    
     model_without_ddp = model
     if hasattr(model, 'module'):
         model_without_ddp = model.module
 
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Caption generation:'
-    print_freq = 50
+    print_freq = 500
     
     result = []
 
@@ -110,7 +110,7 @@ def main(args, config):
     max_epoch = config['schedular']['epochs']
 
     print("Creating captioning dataset")
-    train_dataset, val_dataset, test_dataset = create_dataset('caption_coco', config)
+    train_dataset, val_dataset, test_dataset = create_dataset('caption_cosmos', config)
     datasets = [train_dataset, val_dataset, test_dataset]
 
     train_dataset_size = len(train_dataset)
@@ -227,11 +227,11 @@ def main(args, config):
 
                 if utils.is_main_process():
                     # coco_val = coco_caption_eval(config['val_gt_file'], val_result_file)
-                    coco_test = coco_caption_eval(config['test_gt_file'], test_result_file)
+                    # coco_test = coco_caption_eval(config['test_gt_file'], test_result_file)
 
                     log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                                  # **{f'val_{k}': v for k, v in coco_val.eval.items()},
-                                 **{f'test_{k}': v for k, v in coco_test.eval.items()},
+                                #  **{f'test_{k}': v for k, v in coco_test.eval.items()},
                                  'epoch': epoch}
 
                 dist.barrier()

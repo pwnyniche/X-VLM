@@ -18,7 +18,7 @@ import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 
 from models import load_pretrained
-from models.model_nlvr import XVLM
+from models.model_cosmos import XVLM
 
 from models.tokenization_bert import BertTokenizer
 from models.tokenization_roberta import RobertaTokenizer
@@ -37,16 +37,18 @@ def train(model, data_loader, optimizer, tokenizer, epoch, device, scheduler):
     metric_logger.add_meter('loss', utils.SmoothedValue(window_size=50, fmt='{value:.4f}'))
 
     header = 'Train Epoch: [{}]'.format(epoch)
-    print_freq = 50   
+    print_freq = 500   
     step_size = 100
 
-    for i, (image0, image1, text, targets) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
-        images = torch.cat([image0, image1], dim=0)
-        images, targets = images.to(device), targets.to(device)   
+    for i, (image, text1, text2, targets) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+        # images = torch.cat([image0, image1], dim=0)
+        image, targets = image.to(device), targets.to(device)   
         
-        text_inputs = tokenizer(text, padding='longest', return_tensors="pt").to(device)  
-        
-        loss = model(images, text_inputs.input_ids, text_inputs.attention_mask, targets=targets, train=True)
+        text_inputs1 = tokenizer(text1, padding="longest", return_tensors="pt", max_length=512,truncation=True).to(device)  
+        text_inputs2 = tokenizer(text2, padding="longest", return_tensors="pt", max_length=512,truncation=True).to(device)
+        loss = model(image, text_inputs1.input_ids, text_inputs1.attention_mask, 
+            text_inputs2.input_ids, text_inputs2.attention_mask, 
+            targets=targets, train=True)
         
         optimizer.zero_grad()
         loss.backward()
@@ -69,19 +71,21 @@ def evaluate(model, data_loader, tokenizer, device):
     metric_logger = utils.MetricLogger(delimiter="  ")
 
     header = 'Evaluation:'
-    print_freq = 50
+    print_freq = 500
 
-    for image0, image1, text, targets in metric_logger.log_every(data_loader, print_freq, header):
-        images = torch.cat([image0, image1], dim=0)
-        images, targets = images.to(device), targets.to(device)   
-        text_inputs = tokenizer(text, padding='longest', return_tensors="pt").to(device)
+    for (image, text1, text2, targets) in metric_logger.log_every(data_loader, print_freq, header):
+        image, targets = image.to(device), targets.to(device)   
+        text_inputs1 = tokenizer(text1, padding="longest", return_tensors="pt", max_length=512,truncation=True).to(device)  
+        text_inputs2 = tokenizer(text2, padding="longest", return_tensors="pt", max_length=512,truncation=True).to(device)
 
-        prediction = model(images, text_inputs.input_ids, text_inputs.attention_mask, targets=targets, train=False)
+        prediction = model(image, text_inputs1.input_ids, text_inputs1.attention_mask, 
+            text_inputs2.input_ids, text_inputs2.attention_mask, 
+            targets=targets, train=False)
  
         _, pred_class = prediction.max(1)
         accuracy = (targets == pred_class).sum() / targets.size(0)
         
-        metric_logger.meters['acc'].update(accuracy.item(), n=image0.size(0))
+        metric_logger.meters['acc'].update(accuracy.item(), n=image.size(0))
                 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
@@ -116,7 +120,7 @@ def main(args, config):
     cudnn.benchmark = True
 
     print("Creating dataset")
-    train_dataset, val_dataset, test_dataset = create_dataset('nlvr', config)
+    train_dataset, val_dataset, test_dataset = create_dataset('cosmos', config)
     datasets = [train_dataset, val_dataset, test_dataset]
 
     train_dataset_size = len(train_dataset)
@@ -130,7 +134,7 @@ def main(args, config):
     if args.distributed:
         num_tasks = utils.get_world_size()
         global_rank = utils.get_rank()            
-        samplers = create_sampler(datasets, [True, False, False], num_tasks, global_rank)         
+        samplers = create_sampler(datasets, [True, False, False], num_tasks, global_rank)     
     else:
         samplers = [None, None, None]
 
@@ -141,7 +145,7 @@ def main(args, config):
 
     print("Creating model")
     model = XVLM(config=config)
-    model.load_pretrained(args.checkpoint, config, load_nlvr_pretrain=args.load_nlvr_pretrain, is_eval=args.evaluate)
+    model.load_pretrained(args.checkpoint, config, is_eval=args.evaluate)
     model = model.to(device)
     print("### Total Params: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
@@ -229,8 +233,8 @@ def main(args, config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--checkpoint', type=str, required=True)
-    parser.add_argument('--config', default='./configs/NLVR.yaml')
-    parser.add_argument('--output_dir', default='output/nlvr')
+    parser.add_argument('--config', default='./configs/COSMOS.yaml')
+    parser.add_argument('--output_dir', default='output/cosmos')
 
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)
@@ -238,7 +242,6 @@ if __name__ == '__main__':
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', action='store_false')
 
-    parser.add_argument('--load_nlvr_pretrain', action='store_true')
     parser.add_argument('--bs', default=-1, type=int, help="for each gpu, batch_size = bs // num_gpus")
     parser.add_argument('--evaluate', action='store_true')
 

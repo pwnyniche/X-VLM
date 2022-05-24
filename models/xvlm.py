@@ -200,6 +200,14 @@ def build_mlp(input_dim, output_dim):
         nn.Linear(input_dim * 2, output_dim)
     )
 
+def build_mlp_cosmos(input_dim, output_dim):
+    return nn.Sequential(
+        nn.Linear(input_dim, input_dim ),
+        nn.LayerNorm(input_dim),
+        nn.GELU(),
+        nn.Linear(input_dim, output_dim)
+    )
+
 
 def load_pretrained(ckpt_rpath, config, is_eval=False, load_text=False):
     checkpoint = torch.load(ckpt_rpath, map_location='cpu')
@@ -374,8 +382,10 @@ class XVLMBase(nn.Module):
         assert image_feat.size(-1) == self.embed_dim
         assert text_feat.size(-1) == self.embed_dim
 
-        image_feat_all = allgather(image_feat, torch.distributed.get_rank(), torch.distributed.get_world_size())
-        text_feat_all = allgather(text_feat, torch.distributed.get_rank(), torch.distributed.get_world_size())
+        # image_feat_all = allgather(image_feat, torch.distributed.get_rank(), torch.distributed.get_world_size())
+        # text_feat_all = allgather(text_feat, torch.distributed.get_rank(), torch.distributed.get_world_size())
+        image_feat_all = image_feat
+        text_feat_all = text_feat
         logits = image_feat_all @ text_feat_all.t() / self.temp
 
         bsz = image_feat_all.shape[0]
@@ -388,7 +398,8 @@ class XVLMBase(nn.Module):
         else:
             idx = idx.view(-1, 1)
             assert idx.size(0) == image_feat.size(0)
-            idx_all = allgather(idx, torch.distributed.get_rank(), torch.distributed.get_world_size())
+            # idx_all = allgather(idx, torch.distributed.get_rank(), torch.distributed.get_world_size())
+            idx_all = idx
             pos_idx = torch.eq(idx_all, idx_all.t()).float()
             labels = pos_idx / pos_idx.sum(1, keepdim=True)
 

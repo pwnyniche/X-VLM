@@ -69,8 +69,13 @@ class XVLM(XVLMBase):
         image_embeds, image_atts = self.get_vision_embeds(image)
         image0_embeds, image1_embeds = torch.split(image_embeds, targets.size(0))
 
-        output_cls = self.get_cross_embeds([image0_embeds, image1_embeds], [image_atts[:image0_embeds.size(0)], image_atts[image0_embeds.size(0):]],
-                                           text_ids=text_ids, text_atts=text_atts)[:, 0, :]
+        output_cls = self.get_cross_embeds(
+        [image0_embeds, image1_embeds],
+        [
+            image_atts[:image0_embeds.size(0)],
+            image_atts[image0_embeds.size(0):]
+        ],
+        text_ids=text_ids, text_atts=text_atts)[:, 0, :]
 
         prediction = self.cls_head(output_cls)
 

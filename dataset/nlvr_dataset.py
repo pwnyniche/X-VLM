@@ -20,13 +20,18 @@ class nlvr_dataset(Dataset):
     def __getitem__(self, index):
 
         ann = self.ann[index]
-
         image0_path = os.path.join(self.image_root, ann['images'][0])
-        image0 = Image.open(image0_path).convert('RGB')
+        try:
+            image0 = Image.open(image0_path).convert('RGB')
+        except:
+            image0 = Image.open('images/nlvr2/dev/dev-1-0-img0.png')
         image0 = self.transform(image0)
 
         image1_path = os.path.join(self.image_root, ann['images'][1])
-        image1 = Image.open(image1_path).convert('RGB')
+        try:
+            image1 = Image.open(image1_path).convert('RGB')
+        except:
+            image1 = Image.open('images/nlvr2/dev/dev-1-0-img1.png')           
         image1 = self.transform(image1)
 
         sentence = pre_caption(ann['sentence'], self.max_words)

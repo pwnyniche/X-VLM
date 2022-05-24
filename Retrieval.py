@@ -214,7 +214,7 @@ def itm_eval(scores_i2t, scores_t2i, txt2img, img2txt):
 def main(args, config):
     utils.init_distributed_mode(args)
     device = torch.device(args.device)
-
+    print(config)
     world_size = utils.get_world_size()
 
     if args.bs > 0:

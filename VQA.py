@@ -92,7 +92,8 @@ def evaluation(model, data_loader, tokenizer, device, config) :
 def main(args, config):
     utils.init_distributed_mode(args)    
     device = torch.device(args.device)
-
+    print(config)
+    zz
     world_size = utils.get_world_size()
 
     if world_size > 8:

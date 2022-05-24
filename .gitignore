@@ -1,4 +1,6 @@
 refTools/*
 **/__pycache__/
 data/
-dataset/
+images/
+output/
+checkpoint/

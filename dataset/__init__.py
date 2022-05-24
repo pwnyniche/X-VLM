@@ -7,10 +7,11 @@ from PIL import Image
 from dataset.re_dataset import re_train_dataset, re_eval_dataset
 from dataset.pretrain_dataset import ImageTextJsonDataset, RegionTextJsonDataset
 from dataset.nlvr_dataset import nlvr_dataset
+from dataset.cosmos_dataset import cosmos_dataset
 from dataset.vqa_dataset import vqa_dataset
 from dataset.grounding_dataset import grounding_dataset, grounding_dataset_bbox
 from dataset.coco_karpathy_dataset import coco_karpathy_train, coco_karpathy_train_scst, coco_karpathy_caption_eval
-
+from dataset.cosmos_caption import cosmos_train, cosmos_caption_eval
 
 from dataset.randaugment import RandomAugment
 
@@ -97,6 +98,12 @@ def create_dataset(dataset, config):
         test_dataset = nlvr_dataset(config['test_file'], test_transform, config['image_root'])
         return train_dataset, val_dataset, test_dataset
 
+    elif dataset == 'cosmos':
+        train_dataset = cosmos_dataset(config['train_file'], train_transform, config['image_root'])
+        val_dataset = cosmos_dataset(config['val_file'], test_transform, config['image_root'])
+        test_dataset = cosmos_dataset(config['test_file'], test_transform, config['image_root'])
+        return train_dataset, val_dataset, test_dataset
+
     elif dataset == 'grounding':
         train_transform = transforms.Compose([
             transforms.Resize((config['image_res'], config['image_res']), interpolation=Image.BICUBIC),
@@ -138,6 +145,13 @@ def create_dataset(dataset, config):
         train_dataset = coco_karpathy_train(train_transform, config['image_root'], config['train_file'], prompt=config['prompt'], max_words=config['max_tokens'])
         val_dataset = coco_karpathy_caption_eval(test_transform, config['image_root'], config['val_file'], 'val')
         test_dataset = coco_karpathy_caption_eval(test_transform, config['image_root'], config['test_file'], 'test')
+
+        return train_dataset, val_dataset, test_dataset
+
+    elif dataset == 'caption_cosmos':
+        train_dataset = cosmos_train(train_transform, config['image_root'], config['train_file'], prompt=config['prompt'], max_words=config['max_tokens'])
+        val_dataset = cosmos_caption_eval(test_transform, config['image_root'], config['val_file'], 'val')
+        test_dataset = cosmos_caption_eval(test_transform, config['image_root'], config['test_file'], 'test')
 
         return train_dataset, val_dataset, test_dataset
 

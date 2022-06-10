@@ -150,8 +150,8 @@ def create_dataset(dataset, config):
 
     elif dataset == 'caption_cosmos':
         train_dataset = cosmos_train(train_transform, config['image_root'], config['train_file'], prompt=config['prompt'], max_words=config['max_tokens'])
-        val_dataset = cosmos_caption_eval(test_transform, config['image_root'], config['val_file'], 'val')
-        test_dataset = cosmos_caption_eval(test_transform, config['image_root'], config['test_file'], 'test')
+        val_dataset = cosmos_train(test_transform, config['image_root'], config['val_file'], 'val')
+        test_dataset = cosmos_train(test_transform, config['image_root'], config['test_file'], 'test')
 
         return train_dataset, val_dataset, test_dataset
 

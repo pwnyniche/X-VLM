@@ -4,8 +4,8 @@ from models import XVLMBase
 
 class XVLM(XVLMBase):
     def __init__(self, config):
-        super().__init__(config, load_vision_params=True, load_text_params=True,
-                         use_contrastive_loss=True, use_matching_loss=True, use_mlm_loss=True, use_bbox_loss=True, config_text=None)
+        super().__init__(config, load_vision_params=False, load_text_params=False,
+                         use_contrastive_loss=False, use_matching_loss=True, use_mlm_loss=False, use_bbox_loss=True, config_text=None)
 
     def forward(self, image, text_ids, text_atts, text_ids_masked=None, masked_pos=None, masked_ids=None,
                 image_atts=None, idx_to_group_img=None, target_bbox=None, is_image=None, ret_bbox_loss=False):

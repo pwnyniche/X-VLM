@@ -26,7 +26,7 @@ class cosmos_train(Dataset):
         self.img_ids = {}  
         n = 0
         for ann in self.annotation:
-            img_id = ann['image']
+            img_id = ann['img_local_path']
             if img_id not in self.img_ids.keys():
                 self.img_ids[img_id] = n
                 n += 1    
@@ -38,13 +38,13 @@ class cosmos_train(Dataset):
         
         ann = self.annotation[index]
         
-        image_path = os.path.join(self.image_root, ann['image'])
+        image_path = os.path.join(self.image_root, ann['img_local_path'])
         image = Image.open(image_path).convert('RGB')   
         image = self.transform(image)
         
         caption = self.prompt + pre_caption(ann['caption'], self.max_words)
 
-        return image, caption, self.img_ids[ann['image']]
+        return image, caption, self.img_ids[ann['img_local_path']]
 
 
 class cosmos_train_scst(Dataset):
@@ -56,10 +56,10 @@ class cosmos_train_scst(Dataset):
             for ann in json.load(open(f, 'r')):
                 self.annotation.append(ann)
 
-                if ann['image'] in self.image_captions_map.keys():
-                    self.image_captions_map[ann['image']].append(ann['caption'])
+                if ann['img_local_path'] in self.image_captions_map.keys():
+                    self.image_captions_map[ann['img_local_path']].append(ann['caption'])
                 else:
-                    self.image_captions_map[ann['image']] = [ann['caption']]
+                    self.image_captions_map[ann['img_local_path']] = [ann['caption']]
 
         counter = Counter()
         for _, v in self.image_captions_map.items():
@@ -85,12 +85,12 @@ class cosmos_train_scst(Dataset):
     def __getitem__(self, index):
         ann = self.annotation[index]
 
-        image_path = os.path.join(self.image_root, ann['image'])
+        image_path = os.path.join(self.image_root, ann['img_local_path'])
         image = Image.open(image_path).convert('RGB')
         image = self.transform(image)
 
         # w/o prompt
-        captions_gt = [pre_caption(c, self.max_words) for c in self.image_captions_map[ann['image']]]
+        captions_gt = [pre_caption(c, self.max_words) for c in self.image_captions_map[ann['img_local_path']]]
 
         return image, random.sample(captions_gt, 5)
 
@@ -120,10 +120,10 @@ class cosmos_caption_eval(Dataset):
         
         ann = self.annotation[index]
         
-        image_path = os.path.join(self.image_root, ann['image'])
+        image_path = os.path.join(self.image_root, ann['img_local_path'])
         image = Image.open(image_path).convert('RGB')   
         image = self.transform(image)          
         
-        # img_id = ann['image'].split('/')[-1].strip('.jpg').split('_')[-1]
-        img_id = ann['image'].split('/')[-1].split('.')[0]
+        # img_id = ann['img_local_path'].split('/')[-1].strip('.jpg').split('_')[-1]
+        img_id = ann['img_local_path'].split('/')[-1].split('.')[0]
         return image, int(img_id)
